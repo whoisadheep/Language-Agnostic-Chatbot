@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+.pytest_cache/
+*.db
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+*.log
+stitch_output.html
+.planning/

@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-on-surface;
+    font-family: 'Inter', sans-serif;
+  }
+  h1, h2, h3, .font-headline {
+    font-family: 'Manrope', sans-serif;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .chat-bubble-inbound {
+    border-bottom-left-radius: 0.5rem;
+  }
+  .chat-bubble-outbound {
+    border-bottom-right-radius: 0.5rem;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
