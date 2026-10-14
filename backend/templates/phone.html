@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Voicera — Rudra Infotek Receptionist</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-surface: #f8fafc;
+      --card-bg: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #64748b;
+      --accent-purple: #6366f1;
+      --accent-purple-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+      --accent-red: #ef4444;
+      --accent-red-gradient: linear-gradient(135deg, #ef4444, #dc2626);
+      --border-subtle: #f1f5f9;
+      --border-card: #e2e8f0;
+      --shadow-card: 0 20px 40px -10px rgba(99, 102, 241, 0.08), 0 4px 16px -2px rgba(0, 0, 0, 0.02);
+      --shadow-dock: 0 16px 36px -8px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-surface);
+      background-image: 
+        radial-gradient(circle at 50% -10%, rgba(99, 102, 241, 0.12) 0%, rgba(248, 250, 252, 0) 55%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05) 0%, rgba(248, 250, 252, 0) 40%);
+      color: var(--text-primary);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 2.25rem 1.25rem 1.75rem 1.25rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .app-viewport {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      gap: 1.5rem;
+    }
+
+    /* ─── Profile Header ────────────────────────────────────── */
+    .profile-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      margin-top: 0.5rem;
+    }
+
+    .avatar-container {
+      position: relative;
+      width: 106px;
+      height: 106px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+
+    .ripple-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1.5px solid rgba(99, 102, 241, 0.15);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .ring-1 {
+      width: 106px;
+      height: 106px;
+      opacity: 0.8;
+    }
+
+    .ring-2 {
+      width: 130px;
+      height: 130px;
+      opacity: 0.45;
+    }
+
+    .ring-3 {
+      width: 154px;
+      height: 154px;
+      opacity: 0.2;
+    }
+
+    .speaking .ring-1 {
+      animation: ripple 2s infinite ease-out;
+    }
+    .speaking .ring-2 {
+      animation: ripple 2s infinite ease-out 0.4s;
+    }
+    .speaking .ring-3 {
+      animation: ripple 2s infinite ease-out 0.8s;
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(0.95); opacity: 0.6; }
+      50% { opacity: 0.25; }
+      100% { transform: scale(1.28); opacity: 0; }
+    }
+
+    .avatar-img-wrap {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 10px 24px -4px rgba(99, 102, 241, 0.2);
+      border: 3px solid #ffffff;
+      background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .avatar-img-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .contact-name {
+      font-size: 1.45rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.025em;
+      margin-bottom: 0.2rem;
+    }
+
+    .contact-number {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .editable-number {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: 500;
+      text-align: center;
+      width: 140px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .call-duration {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent-purple);
+      letter-spacing: -0.01em;
+    }
+
+    /* ─── Audio Waveform ────────────────────────────────────── */
+    .waveform-visualizer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      height: 38px;
+      width: 100%;
+      max-width: 280px;
+      margin: 0.25rem 0;
+    }
+
+    .wave-bar {
+      width: 3.5px;
+      height: 6px;
+      border-radius: 99px;
+      background: var(--accent-purple-gradient);
+      opacity: 0.35;
+      transition: height 0.08s ease, opacity 0.15s ease;
+    }
+
+    .speaking .wave-bar {
+      opacity: 0.9;
+    }
+
+    .listening .wave-bar {
+      background: linear-gradient(135deg, #10b981, #3b82f6);
+      opacity: 0.75;
+    }
+
+    /* ─── Central Dialogue & Tag Card ───────────────────────── */
+    .dialogue-card {
+      width: 100%;
+      background: var(--card-bg);
+      border-radius: 28px;
+      border: 1px solid var(--border-card);
+      box-shadow: var(--shadow-card);
+      padding: 1.5rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.15rem;
+      min-height: 220px;
+      max-height: 330px;
+    }
+
+    .dialogue-scroller {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      padding-right: 0.25rem;
+      user-select: text;
+    }
+
+    .dialogue-scroller::-webkit-scrollbar {
+      width: 3px;
+    }
+    .dialogue-scroller::-webkit-scrollbar-thumb {
+      background: #e2e8f0;
+      border-radius: 3px;
+    }
+
+    .dialogue-line {
+      font-size: 0.93rem;
+      line-height: 1.5;
+      color: #334155;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .speaker-label {
+      font-weight: 700;
+      color: #4f46e5;
+      margin-right: 0.3rem;
+    }
+
+    .empty-prompt {
+      margin: auto;
+      text-align: center;
+      font-size: 0.86rem;
+      color: #94a3b8;
+      line-height: 1.5;
+      padding: 1rem 0;
+    }
+
+    /* ─── Real-time Lead Tags ────────────────────────────────── */
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      justify-content: center;
+      padding-top: 0.5rem;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .tag-pill {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+      border-radius: 99px;
+      padding: 0.32rem 0.85rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: #475569;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s ease;
+    }
+
+    .tag-pill.active {
+      border-color: rgba(99, 102, 241, 0.4);
+      background: #f5f3ff;
+      color: #6366f1;
+    }
+
+    /* ─── Floating Bottom Control Dock ───────────────────────── */
+    .control-dock {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 999px;
+      box-shadow: var(--shadow-dock);
+      padding: 0.55rem 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 340px;
+      margin-top: auto;
+      margin-bottom: 0.5rem;
+    }
+
+    .dock-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #f8fafc;
+      color: #475569;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .dock-btn:active {
+      transform: scale(0.92);
+    }
+
+    .dock-btn.active {
+      background: #fef2f2;
+      color: var(--accent-red);
+    }
+
+    .dock-btn svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2.2;
+    }
+
+    /* Primary Call Button (Purple) */
+    .call-primary-btn {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--accent-purple-gradient);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .call-primary-btn:active {
+      transform: scale(0.92);
+    }
+
+    .call-primary-btn svg {
+      width: 23px;
+      height: 23px;
+      fill: currentColor;
+    }
+
+    /* End Call Button (Red Circle) */
+    .hangup-primary-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent-red-gradient);
+      color: #ffffff;
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+      border: none;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hangup-primary-btn:active {
+      transform: scale(0.92);
+    }
+
+    .hangup-primary-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      stroke-width: 2.6;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-viewport">
+    
+    <!-- Profile & Header Section -->
+    <section class="profile-section" id="profileSection">
+      <div class="avatar-container" id="avatarContainer">
+        <div class="ripple-ring ring-3"></div>
+        <div class="ripple-ring ring-2"></div>
+        <div class="ripple-ring ring-1"></div>
+        <div class="avatar-img-wrap">
+          <!-- Elegant minimal receptionist avatar portrait -->
+          <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=260&q=80" alt="Receptionist" />
+        </div>
+      </div>
+
+      <h1 class="contact-name">Rudra Infotek</h1>
+      <div class="contact-number">
+        <input type="text" id="phoneInput" class="editable-number" value="+91 92771 99206" title="Tap to change test caller number" />
+      </div>
+      <div class="call-duration" id="callDuration">00:00</div>
+    </section>
+
+    <!-- Soundwave Bars -->
+    <div class="waveform-visualizer" id="waveform">
+      <!-- 28 bars generated via JS -->
+    </div>
+
+    <!-- Live Dialogue & Tag Card -->
+    <section class="dialogue-card">
+      <div class="dialogue-scroller" id="dialogueScroller">
+        <div class="empty-prompt" id="emptyPrompt">
+          Tap the call button to connect with Rudra Infotek Receptionist.
+        </div>
+      </div>
+
+      <!-- Real-time Extracted Lead Pills -->
+      <div class="tags-container" id="tagsContainer">
+        <div class="tag-pill" id="pillService">Service: Pending</div>
+        <div class="tag-pill" id="pillUrgency">Urgency: Normal</div>
+        <div class="tag-pill" id="pillCaller">Caller: Verified</div>
+      </div>
+    </section>
+
+    <!-- Floating Dock Controls -->
+    <nav class="control-dock">
+      <!-- Mute Mic -->
+      <button class="dock-btn" id="muteBtn" title="Mute Microphone">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+        </svg>
+      </button>
+
+      <!-- Speaker / Output Status -->
+      <button class="dock-btn" id="speakerBtn" title="Speaker">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+        </svg>
+      </button>
+
+      <!-- Center Start Call Button (Purple) -->
+      <button class="call-primary-btn" id="callBtn" title="Start Call">
+        <svg viewBox="0 0 24 24">
+          <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.24 1.02l-2.21 2.2z"/>
+        </svg>
+      </button>
+
+      <!-- Dialpad / Keypad (Visual matching image) -->
+      <button class="dock-btn" id="keypadBtn" title="Keypad">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h10M7 16h10M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
+        </svg>
+      </button>
+
+      <!-- Hangup Call Button (Red Circle) -->
+      <button class="hangup-primary-btn" id="hangupBtn" title="End Call">
+        <svg fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </nav>
+
+  </div>
+
+  <script>
+    // ─── Generate Waveform Bars ──────────────────────────────────
+    const waveformContainer = document.getElementById("waveform");
+    const numBars = 28;
+    const waveBars = [];
+    for (let i = 0; i < numBars; i++) {
+      const bar = document.createElement("div");
+      bar.className = "wave-bar";
+      waveformContainer.appendChild(bar);
+      waveBars.push(bar);
+    }
+
+    // ─── Application State ──────────────────────────────────────
+    let ws = null;
+    let audioCtx = null;
+    let micStream = null;
+    let processor = null;
+    let micSource = null;
+    let isCalling = false;
+    let isMuted = false;
+    let activeSources = [];
+    let nextPlayTime = 0;
+    let callStartTimestamp = 0;
+    let timerInterval = null;
+    let waveAnimFrame = null;
+
+    // ─── DOM References ─────────────────────────────────────────
+    const profileSection = document.getElementById("profileSection");
+    const callDuration = document.getElementById("callDuration");
+    const phoneInput = document.getElementById("phoneInput");
+    const dialogueScroller = document.getElementById("dialogueScroller");
+    const emptyPrompt = document.getElementById("emptyPrompt");
+    const callBtn = document.getElementById("callBtn");
+    const hangupBtn = document.getElementById("hangupBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const pillService = document.getElementById("pillService");
+    const pillUrgency = document.getElementById("pillUrgency");
+    const pillCaller = document.getElementById("pillCaller");
+
+    function setCallState(state) {
+      profileSection.className = "profile-section " + state;
+      waveformContainer.className = "waveform-visualizer " + state;
+    }
+
+    function updateTimer() {
+      const elapsed = Math.floor((Date.now() - callStartTimestamp) / 1000);
+      const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const secs = String(elapsed % 60).padStart(2, '0');
+      callDuration.textContent = `${mins}:${secs}`;
+    }
+
+    function addDialogue(speaker, text) {
+      if (!text) return;
+      if (emptyPrompt) emptyPrompt.style.display = "none";
+      const line = document.createElement("div");
+      line.className = "dialogue-line";
+      
+      const label = document.createElement("span");
+      label.className = "speaker-label";
+      label.textContent = speaker + " - ";
+      
+      const content = document.createElement("span");
+      content.textContent = text;
+      
+      line.appendChild(label);
+      line.appendChild(content);
+      dialogueScroller.appendChild(line);
+      dialogueScroller.scrollTop = dialogueScroller.scrollHeight;
+
+      // Extract real-time tags from speech
+      detectTags(text);
+    }
+
+    function detectTags(text) {
+      const lower = text.toLowerCase();
+      if (lower.includes("cctv") || lower.includes("कैमरा") || lower.includes("camera") || lower.includes("installation")) {
+        pillService.textContent = "Job: CCTV Setup";
+        pillService.classList.add("active");
+      } else if (lower.includes("repair") || lower.includes("service") || lower.includes("खराब") || lower.includes("theek")) {
+        pillService.textContent = "Job: Maintenance";
+        pillService.classList.add("active");
+      }
+
+      if (lower.includes("emergency") || lower.includes("jaldi") || lower.includes("aaj hi")) {
+        pillUrgency.textContent = "Urgency: High";
+        pillUrgency.classList.add("active");
+      }
+
+      const nameMatch = text.match(/(?:naam|name)\s+(?:hai\s+)?([A-Za-z\u0900-\u097F]+)/i);
+      if (nameMatch && nameMatch[1]) {
+        pillCaller.textContent = "Caller: " + nameMatch[1];
+        pillCaller.classList.add("active");
+      }
+    }
+
+    // ─── Audio Helpers ──────────────────────────────────────────
+    function downsample(buffer, sampleRate, outSampleRate) {
+      if (outSampleRate === sampleRate || outSampleRate > sampleRate) return buffer;
+      const ratio = sampleRate / outSampleRate;
+      const newLength = Math.round(buffer.length / ratio);
+      const result = new Float32Array(newLength);
+      let offsetResult = 0;
+      let offsetBuffer = 0;
+      while (offsetResult < result.length) {
+        const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+        let accum = 0, count = 0;
+        for (let i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+          accum += buffer[i];
+          count++;
+        }
+        result[offsetResult] = count > 0 ? (accum / count) : 0;
+        offsetResult++;
+        offsetBuffer = nextOffsetBuffer;
+      }
+      return result;
+    }
+
+    function floatTo16BitPCM(input) {
+      const output = new Int16Array(input.length);
+      for (let i = 0; i < input.length; i++) {
+        const s = Math.max(-1, Math.min(1, input[i]));
+        output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      return output;
+    }
+
+    function arrayBufferToBase64(buffer) {
+      let binary = '';
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return window.btoa(binary);
+    }
+
+    function clearPlaybackQueue() {
+      for (const src of activeSources) {
+        try { src.stop(); } catch(e) {}
+      }
+      activeSources = [];
+      if (audioCtx) {
+        nextPlayTime = audioCtx.currentTime;
+      }
+    }
+
+    // ─── Smooth Waveform Animation ──────────────────────────────
+    function animateWaveform() {
+      if (!isCalling) {
+        waveBars.forEach(b => b.style.height = "5px");
+        return;
+      }
+      const isSpeaking = activeSources.length > 0;
+      waveBars.forEach((bar, idx) => {
+        let height = 5;
+        if (isSpeaking) {
+          const wave = Math.sin(Date.now() * 0.009 + idx * 0.45) * 0.5 + 0.5;
+          height = 6 + wave * 26;
+        } else {
+          // Subtle listening idle pulse
+          const wave = Math.sin(Date.now() * 0.004 + idx * 0.25) * 0.5 + 0.5;
+          height = 4 + wave * 9;
+        }
+        bar.style.height = `${height}px`;
+      });
+      waveAnimFrame = requestAnimationFrame(animateWaveform);
+    }
+
+    function playAudioChunk(base64Payload) {
+      if (!audioCtx) return;
+      try {
+        const binaryStr = window.atob(base64Payload);
+        const len = binaryStr.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const int16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) {
+          float32[i] = int16[i] / 32768.0;
+        }
+
+        const audioBuffer = audioCtx.createBuffer(1, float32.length, 16000);
+        audioBuffer.copyToChannel(float32, 0);
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioCtx.destination);
+        activeSources.push(source);
+
+        source.onended = () => {
+          const idx = activeSources.indexOf(source);
+          if (idx > -1) activeSources.splice(idx, 1);
+          if (activeSources.length === 0 && isCalling) {
+            setCallState("listening");
+          }
+        };
+
+        const now = audioCtx.currentTime;
+        if (nextPlayTime < now) {
+          nextPlayTime = now + 0.04;
+        }
+        source.start(nextPlayTime);
+        nextPlayTime += audioBuffer.duration;
+
+        setCallState("speaking");
+      } catch (err) {
+        console.error("Audio playback error:", err);
+      }
+    }
+
+    // ─── Call Lifecycle ─────────────────────────────────────────
+    async function startCall() {
+      try {
+        if (navigator.vibrate) navigator.vibrate(30);
+
+        // Resume / initialize Web Audio
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        await audioCtx.resume();
+
+        // Mic permission
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+
+        // WebSocket Connection
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/exotel?sample-rate=16000`;
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          isCalling = true;
+          callStartTimestamp = Date.now();
+          timerInterval = setInterval(updateTimer, 1000);
+          animateWaveform();
+
+          // UI swap
+          callBtn.style.display = "none";
+          hangupBtn.style.display = "flex";
+
+          const streamSid = "web_" + Math.random().toString(36).substring(2, 10);
+          const callSid = "web_" + Math.random().toString(36).substring(2, 10);
+          const callerId = phoneInput.value.replace(/[^0-9+]/g, '') || "+919277199206";
+
+          ws.send(JSON.stringify({ event: "connected" }));
+          ws.send(JSON.stringify({
+            event: "start",
+            start: {
+              stream_sid: streamSid,
+              call_sid: callSid,
+              media_format: { sample_rate: 16000 },
+              custom_parameters: {
+                caller_id: callerId,
+                "sample-rate": "16000"
+              }
+            }
+          }));
+
+          // Mic processing pipeline
+          micSource = audioCtx.createMediaStreamSource(micStream);
+          const bufferSize = 2048;
+          processor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+
+          processor.onaudioprocess = (e) => {
+            if (!isCalling || isMuted) return;
+            const inputData = e.inputBuffer.getChannelData(0);
+            const downsampled = downsample(inputData, audioCtx.sampleRate, 16000);
+            const pcm16 = floatTo16BitPCM(downsampled);
+            const b64 = arrayBufferToBase64(pcm16.buffer);
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                event: "media",
+                media: { payload: b64 }
+              }));
+            }
+          };
+
+          micSource.connect(processor);
+          processor.connect(audioCtx.destination);
+
+          setCallState("listening");
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.event === "media" && msg.media && msg.media.payload) {
+              playAudioChunk(msg.media.payload);
+            } else if (msg.event === "clear") {
+              clearPlaybackQueue();
+              setCallState("listening");
+            } else if (msg.event === "transcript") {
+              const speaker = msg.role === "assistant" ? "Viora" : "Caller";
+              addDialogue(speaker, msg.text);
+            } else if (msg.event === "stop") {
+              endCall();
+            }
+          } catch (e) {
+            console.error("Message parse error:", e);
+          }
+        };
+
+        ws.onerror = (err) => {
+          console.error("WebSocket error:", err);
+          endCall();
+        };
+
+        ws.onclose = () => {
+          if (isCalling) endCall();
+        };
+
+      } catch (err) {
+        console.error("Start call failed:", err);
+        alert("Microphone permission required: " + (err.message || err));
+      }
+    }
+
+    function endCall() {
+      if (navigator.vibrate) navigator.vibrate([30, 50]);
+      isCalling = false;
+      clearInterval(timerInterval);
+      if (waveAnimFrame) cancelAnimationFrame(waveAnimFrame);
+
+      clearPlaybackQueue();
+      setCallState("");
+      waveBars.forEach(b => b.style.height = "5px");
+
+      if (ws) {
+        try {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ event: "stop" }));
+            ws.close();
+          }
+        } catch (e) {}
+        ws = null;
+      }
+
+      if (processor) {
+        try { processor.disconnect(); } catch(e) {}
+        processor = null;
+      }
+      if (micSource) {
+        try { micSource.disconnect(); } catch(e) {}
+        micSource = null;
+      }
+      if (micStream) {
+        micStream.getTracks().forEach(t => t.stop());
+        micStream = null;
+      }
+      if (audioCtx) {
+        try { audioCtx.close(); } catch(e) {}
+        audioCtx = null;
+      }
+
+      callBtn.style.display = "flex";
+      hangupBtn.style.display = "none";
+      callDuration.textContent = "00:00";
+    }
+
+    callBtn.addEventListener("click", startCall);
+    hangupBtn.addEventListener("click", endCall);
+
+    muteBtn.addEventListener("click", () => {
+      isMuted = !isMuted;
+      muteBtn.classList.toggle("active", isMuted);
+    });
+  </script>
+</body>
+</html>
