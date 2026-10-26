@@ -483,9 +483,9 @@ async def voice_websocket_endpoint(websocket: WebSocket, db: Session = Depends(g
     - Full-duplex barge-in interruption with instant client queue clearance
     """
     await websocket.accept()
-    vad = VADIterator(threshold=0.014, sampling_rate=SAMPLE_RATE, min_silence_duration_ms=260)
+    vad = VADIterator(threshold=0.014, sampling_rate=SAMPLE_RATE, min_silence_duration_ms=450)
     speech_buffer = []
-    pre_roll_buffer = deque(maxlen=8)  # ~250ms pre-roll to prevent clipping the first consonant
+    pre_roll_buffer = deque(maxlen=10)  # ~320ms pre-roll to prevent clipping the first consonant
     is_speaking = False
     is_agent_speaking = False
     agent_speaking_until = 0.0
@@ -705,7 +705,7 @@ async def voice_websocket_endpoint(websocket: WebSocket, db: Session = Depends(g
 
                     duration_s = len(full_audio) / SAMPLE_RATE
                     # Filter out short clicks, breathing, ambient fan noise
-                    if not is_valid_speech_audio(full_audio, SAMPLE_RATE, min_duration=0.25, min_rms=0.008, min_peak=0.020):
+                    if not is_valid_speech_audio(full_audio, SAMPLE_RATE, min_duration=0.35, min_rms=0.008, min_peak=0.020):
                         print(f"[Voice] Utterance discarded: too quiet/short ({duration_s:.2f}s)")
                         continue
 

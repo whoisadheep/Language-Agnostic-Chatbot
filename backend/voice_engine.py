@@ -25,7 +25,8 @@ WHISPER_HALLUCINATIONS = {
     "silence", "[silence]", "(silence)", "[music]", "(music)", "[applause]",
     "so.", "so", "okay.", "okay", "ok.", "ok", "yeah.", "yeah", "hmm.", "hmm",
     "uh.", "uh", "um.", "um", "subtitles by", "subtitled by", "amara.org",
-    "thank you very much", "watching", "see you next time"
+    "thank you very much", "watching", "see you next time",
+    "natural human speech", "natural human speech.", "clear conversational voice dialogue."
 }
 
 # Supported Sarvam bulbul:v3 language codes
@@ -173,7 +174,7 @@ def detect_language(text: str) -> str:
 
 class VADIterator:
     """Ultra-fast, zero-overhead Voice Activity Detector with numpy vectorization."""
-    def __init__(self, threshold=0.014, sampling_rate=16000, min_silence_duration_ms=260, speech_pad_ms=40):
+    def __init__(self, threshold=0.014, sampling_rate=16000, min_silence_duration_ms=450, speech_pad_ms=60):
         self.threshold = threshold
         self.sampling_rate = sampling_rate
         self.min_silence_samples = sampling_rate * min_silence_duration_ms / 1000
@@ -354,8 +355,7 @@ def transcribe_audio_groq(wav_bytes: bytes) -> str:
             file=("speech.wav", wav_bytes),
             model="whisper-large-v3-turbo",
             response_format="json",
-            temperature=0.0,
-            prompt="Clear conversational voice dialogue. Natural human speech."
+            temperature=0.0
         )
         raw_text = resp.text.strip()
         if not raw_text:
