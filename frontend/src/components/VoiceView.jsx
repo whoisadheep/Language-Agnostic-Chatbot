@@ -20,6 +20,12 @@ export default function VoiceView() {
   const isPlayingRef = useRef(false);
   const animFrameRef = useRef(null);
   const dialogueEndRef = useRef(null);
+  const lastVisualizerUpdateRef = useRef(0);
+
+  const isMutedRef = useRef(false);
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   useEffect(() => {
     dialogueEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -83,6 +89,9 @@ export default function VoiceView() {
   const activeSourcesRef = useRef([]);
 
   const clearPlaybackQueue = () => {
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
+    }
     activeSourcesRef.current.forEach(s => {
       try {
         s.stop();
@@ -106,7 +115,9 @@ export default function VoiceView() {
       for (let i = 0; i < len; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      const int16 = new Int16Array(bytes.buffer);
+      const numSamples = Math.floor(bytes.byteLength / 2);
+      if (numSamples === 0) return;
+      const int16 = new Int16Array(bytes.buffer, bytes.byteOffset, numSamples);
       const float32 = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) {
         float32[i] = int16[i] / 32768.0;
@@ -163,7 +174,8 @@ export default function VoiceView() {
       micStreamRef.current = stream;
 
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//localhost:8000/ws/voice`;
+      const host = window.location.hostname || 'localhost';
+      const wsUrl = `${protocol}//${host}:8000/ws/voice`;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -174,30 +186,44 @@ export default function VoiceView() {
         // Trigger initial greeting from backend
         ws.send(JSON.stringify({ event: 'start' }));
 
-        // Setup microphone ScriptProcessor
+        // Setup microphone ScriptProcessor with zero-gain node to avoid acoustic loopback to speakers
         const micSource = audioCtx.createMediaStreamSource(stream);
         const bufferSize = 2048;
         const processor = audioCtx.createScriptProcessor(bufferSize, 1, 1);
         processorRef.current = processor;
 
+        const muteGain = audioCtx.createGain();
+        muteGain.gain.value = 0;
+        micSource.connect(processor);
+        processor.connect(muteGain);
+        muteGain.connect(audioCtx.destination);
+
         processor.onaudioprocess = (e) => {
           if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-          if (isMuted) return;
+          if (isMutedRef.current) return;
 
           const inputData = e.inputBuffer.getChannelData(0);
           
-          // Animate waveform volume based on mic input
-          let sum = 0;
-          for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
-          const rms = Math.sqrt(sum / inputData.length);
-          const scaledH = Math.min(48, Math.max(8, Math.round(rms * 150)));
-          setVolumeLevel([
-            Math.max(6, Math.round(scaledH * 0.6)),
-            Math.max(10, Math.round(scaledH * 0.9)),
-            Math.max(14, scaledH),
-            Math.max(8, Math.round(scaledH * 0.8)),
-            Math.max(6, Math.round(scaledH * 0.5))
-          ]);
+          // Throttled visualizer update with high dynamic sensitivity
+          const now = performance.now();
+          if (now - lastVisualizerUpdateRef.current >= 60) {
+            lastVisualizerUpdateRef.current = now;
+            let sum = 0;
+            for (let i = 0; i < inputData.length; i++) sum += inputData[i] * inputData[i];
+            const rms = Math.sqrt(sum / inputData.length);
+            if (rms < 0.005) {
+              setVolumeLevel([6, 8, 10, 8, 6]);
+            } else {
+              const scaledH = Math.min(48, Math.max(12, Math.round(rms * 450)));
+              setVolumeLevel([
+                Math.max(6, Math.round(scaledH * 0.6)),
+                Math.max(10, Math.round(scaledH * 0.9)),
+                Math.max(14, scaledH),
+                Math.max(8, Math.round(scaledH * 0.8)),
+                Math.max(6, Math.round(scaledH * 0.5))
+              ]);
+            }
+          }
 
           const downsampled = downsample(inputData, audioCtx.sampleRate, 16000);
           const pcm16 = floatTo16BitPCM(downsampled);
@@ -208,9 +234,6 @@ export default function VoiceView() {
             media: { payload: b64 }
           }));
         };
-
-        micSource.connect(processor);
-        processor.connect(audioCtx.destination);
       };
 
       ws.onmessage = (event) => {
@@ -227,14 +250,33 @@ export default function VoiceView() {
               role: msg.role,
               text: msg.text,
               provider: msg.provider,
+              lang: msg.lang,
               time: now
             }]);
           } else if (msg.event === 'speak_client') {
-            // Client-side Web Speech API fallback
+            // Client-side Web Speech API fallback with correct accent/language
             if ('speechSynthesis' in window) {
               setCallState('speaking');
+              try { window.speechSynthesis.cancel(); } catch (e) {}
               const utterance = new SpeechSynthesisUtterance(msg.text);
+              const langCodeMap = {
+                en: 'en-US',
+                hi: 'hi-IN',
+                es: 'es-ES',
+                fr: 'fr-FR',
+                de: 'de-DE',
+                ja: 'ja-JP',
+                ru: 'ru-RU',
+                ar: 'ar-SA',
+                bn: 'bn-IN',
+                zh: 'zh-CN',
+                'zh-cn': 'zh-CN'
+              };
+              if (msg.lang && langCodeMap[msg.lang]) {
+                utterance.lang = langCodeMap[msg.lang];
+              }
               utterance.onend = () => setCallState('listening');
+              utterance.onerror = () => setCallState('listening');
               window.speechSynthesis.speak(utterance);
             }
           }
@@ -408,7 +450,7 @@ export default function VoiceView() {
             <Sparkles className="w-5 h-5 text-indigo-500" />
             <h3 className="font-semibold text-slate-900 dark:text-white">Live Voice Transcript</h3>
             <span className="text-xs bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">
-              STT: Groq Whisper Turbo
+              STT: Sarvam AI Saaras:v3
             </span>
           </div>
           <button

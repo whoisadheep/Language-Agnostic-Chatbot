@@ -8,11 +8,14 @@ const COLORS = ['#5755a9', '#a19ff9', '#fdd2fd', '#e3e0f9', '#9492eb', '#eec4ef'
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
   const [telemetry, setTelemetry] = useState([]);
+  const [gridCrmTickets, setGridCrmTickets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchDashboardData = () => {
     setIsLoading(true);
-    fetch('http://localhost:8000/analytics')
+    const host = window.location.hostname || 'localhost';
+
+    fetch(`http://${host}:8000/analytics`)
       .then(res => res.json())
       .then(json => {
         setData(json);
@@ -25,6 +28,15 @@ export default function AdminDashboard() {
         console.error('Failed to load analytics', err);
         setIsLoading(false);
       });
+
+    fetch(`http://${host}:8000/api/gridcrm/tickets`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.tickets) {
+          setGridCrmTickets(json.tickets);
+        }
+      })
+      .catch(err => console.error('Failed to fetch GridCRM tickets', err));
   };
 
   useEffect(() => {
@@ -275,6 +287,87 @@ export default function AdminDashboard() {
             <p className="text-xs text-slate-400 py-4 text-center">No CRM leads recorded yet.</p>
           )}
         </div>
+      </div>
+
+      {/* GridCRM Cloud Real-Time Firestore Synchronization */}
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-indigo-600" />
+            <h3 className="font-bold text-slate-900 dark:text-white text-sm">
+              Live GridCRM Cloud Synchronization (Firebase Firestore)
+            </h3>
+          </div>
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-medium border border-emerald-200/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Connected (Owner: Rudra)
+            </span>
+            <span className="text-slate-400 font-mono text-[10px]">grid-a4798.firebaseio.com</span>
+          </div>
+        </div>
+
+        {gridCrmTickets.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-semibold text-[11px]">
+                  <th className="pb-2">Customer</th>
+                  <th className="pb-2">Phone</th>
+                  <th className="pb-2">Type</th>
+                  <th className="pb-2">Priority</th>
+                  <th className="pb-2">Problem Summary</th>
+                  <th className="pb-2">Status</th>
+                  <th className="pb-2 text-right">Source</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-600 dark:text-slate-300">
+                {gridCrmTickets.map((t) => (
+                  <tr key={t.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td className="py-2.5 font-semibold text-slate-900 dark:text-white">
+                      {t.customer_name}
+                    </td>
+                    <td className="py-2.5 font-mono text-[11px] text-slate-500">
+                      {t.phone || 'N/A'}
+                    </td>
+                    <td className="py-2.5">
+                      <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-medium">
+                        {t.call_type}
+                      </span>
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${
+                        t.priority === 'High' ? 'bg-red-50 dark:bg-red-950 text-red-600 border border-red-200/60' :
+                        t.priority === 'Medium' ? 'bg-amber-50 dark:bg-amber-950 text-amber-600 border border-amber-200/60' :
+                        'bg-blue-50 dark:bg-blue-950 text-blue-600'
+                      }`}>
+                        {t.priority}
+                      </span>
+                    </td>
+                    <td className="py-2.5 max-w-xs truncate text-slate-500 text-[11px]">
+                      {t.problem_description}
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        t.status === 'Resolved' ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-600' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-600'
+                      }`}>
+                        {t.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 text-right font-mono text-[10px] text-indigo-500">
+                      {t.source}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400 py-4 text-center">
+            Loading real-time Firestore tickets from GridCRM...
+          </p>
+        )}
       </div>
     </div>
   );

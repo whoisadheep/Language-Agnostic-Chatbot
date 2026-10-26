@@ -5,6 +5,9 @@ are correctly identified.
 """
 import pytest
 import langdetect
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from voice_engine import detect_language
 
 
 # ── Fixtures ────────────────────────────────────────────────────────────────────
@@ -62,3 +65,32 @@ class TestLanguageDetection:
             assert isinstance(result, str)
         except langdetect.lang_detect_exception.LangDetectException:
             pass  # This is also acceptable
+
+
+class TestDetectLanguageFunction:
+    """Suite validating custom robust detect_language function for conversational edge cases."""
+
+    @pytest.mark.parametrize("text, expected_lang", [
+        ("Hello, how are you today?", "en"),
+        ("hi", "en"),
+        ("hello", "en"),
+        ("good morning", "en"),
+        ("thanks", "en"),
+        ("thank you", "en"),
+        ("bye", "en"),
+        ("Can you help me with this?", "en"),
+        ("नमस्ते, आप कैसे हैं?", "hi"),
+        ("aap kaise ho", "hi"),
+        ("kya haal hai", "hi"),
+        ("namaste", "hi"),
+        ("Bonjour, comment allez-vous aujourd'hui?", "fr"),
+        ("bonjour", "fr"),
+        ("salut", "fr"),
+        ("Hola, ¿cómo estás? Me llamo Carlos.", "es"),
+        ("hola", "es"),
+        ("buenos dias", "es"),
+        ("مرحبا، كيف حالك اليوم؟", "ar"),
+        ("こんにちは、元気ですか？", "ja"),
+    ])
+    def test_detect_language_accuracy(self, text, expected_lang):
+        assert detect_language(text) == expected_lang

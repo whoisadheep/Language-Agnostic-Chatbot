@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Volume2, Sparkles, Trash2, Send, Bot, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Volume2, Sparkles, Trash2, Send, Bot, User, ArrowRight, ShieldCheck, Mic, MicOff } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '../index.css';
 
@@ -27,7 +27,64 @@ export default function ChatView() {
   const [overrideLang, setOverrideLang] = useState('');
   const [welcomeText, setWelcomeText] = useState("Welcome to OmniAgent X! Type a message in any language, and the AI will auto-detect and respond seamlessly.");
   const [toasts, setToasts] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  const toggleSpeechRecognition = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      addToast("Speech recognition is not supported in this browser. Please use Chrome or Edge.", "warning");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      const langMap = {
+        en: 'en-US', hi: 'hi-IN', es: 'es-ES', fr: 'fr-FR',
+        de: 'de-DE', ja: 'ja-JP', ru: 'ru-RU', ar: 'ar-SA',
+        bn: 'bn-IN', zh: 'zh-CN', 'zh-cn': 'zh-CN'
+      };
+      recognition.lang = langMap[overrideLang] || navigator.language || 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        if (text) {
+          setInput(prev => (prev ? prev + ' ' + text : text));
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.error("SpeechRecognition error:", e);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setIsListening(false);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('chatHistory', JSON.stringify(messages));
@@ -40,7 +97,8 @@ export default function ChatView() {
   useEffect(() => {
     if (messages.length === 0) {
       const browserLang = navigator.language.split('-')[0];
-      fetch(`http://localhost:8000/welcome?lang=${browserLang}`)
+      const host = window.location.hostname || 'localhost';
+      fetch(`http://${host}:8000/welcome?lang=${browserLang}`)
         .then(res => res.json())
         .then(data => {
           if (data.message) {
@@ -74,7 +132,20 @@ export default function ChatView() {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'es' ? 'es-ES' : 'en-US';
+      const codeMap = {
+        en: 'en-US',
+        hi: 'hi-IN',
+        es: 'es-ES',
+        fr: 'fr-FR',
+        de: 'de-DE',
+        ja: 'ja-JP',
+        ru: 'ru-RU',
+        ar: 'ar-SA',
+        bn: 'bn-IN',
+        zh: 'zh-CN',
+        'zh-cn': 'zh-CN'
+      };
+      utterance.lang = codeMap[lang] || 'en-US';
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -99,12 +170,19 @@ export default function ChatView() {
     setIsLoading(true);
 
     try {
-      const payload = { message: userText };
+      const payload = {
+        message: userText,
+        history: messages.slice(-8).map(m => ({
+          role: m.role === 'bot' ? 'assistant' : 'user',
+          content: m.text
+        }))
+      };
       if (overrideLang) {
         payload.override_language = overrideLang;
       }
 
-      const response = await fetch('http://localhost:8000/chat', {
+      const host = window.location.hostname || 'localhost';
+      const response = await fetch(`http://${host}:8000/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -129,12 +207,24 @@ export default function ChatView() {
         role: 'bot',
         text: data.response,
         lang: data.detected_language || 'unknown',
+        confidence: data.confidence,
         provider: data.provider,
         latency_ms: data.latency_ms,
         time: botTime
       };
 
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => {
+        if (prev.length > 0 && (!overrideLang || prev[prev.length - 1].lang === 'auto')) {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            lang: data.detected_language || updated[updated.length - 1].lang,
+            confidence: data.confidence
+          };
+          return [...updated, botMessage];
+        }
+        return [...prev, botMessage];
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
       const botTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -254,8 +344,13 @@ export default function ChatView() {
                 <div className="flex items-center gap-2 px-1 text-[10px] text-slate-400">
                   <span>{msg.time}</span>
                   {msg.lang && msg.lang !== 'error' && (
-                    <span className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded uppercase font-semibold">
-                      {langLabel}
+                    <span className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-semibold text-[10px]">
+                      <span className="uppercase">{langLabel}</span>
+                      {msg.confidence && (
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold border-l border-slate-300 dark:border-slate-700 pl-1.5 tracking-tight">
+                          {msg.confidence}%
+                        </span>
+                      )}
                     </span>
                   )}
                   {msg.provider && (
@@ -325,10 +420,22 @@ export default function ChatView() {
               disabled={isLoading}
               className="flex-1 bg-transparent border-none text-xs md:text-sm px-4 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
             />
-            <div className="flex items-center gap-3">
-              <span className="text-[10px] text-slate-400 font-mono">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
                 {input.length}/500
               </span>
+              <button
+                type="button"
+                onClick={toggleSpeechRecognition}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                  isListening
+                    ? 'bg-rose-500 text-white animate-pulse shadow-rose-500/30 shadow-md ring-2 ring-rose-400'
+                    : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'
+                }`}
+                title={isListening ? "Listening... click to stop" : "Click to speak into text box"}
+              >
+                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}

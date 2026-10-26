@@ -664,7 +664,9 @@
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryStr.charCodeAt(i);
         }
-        const int16 = new Int16Array(bytes.buffer);
+        const numSamples = Math.floor(bytes.byteLength / 2);
+        if (numSamples === 0) return;
+        const int16 = new Int16Array(bytes.buffer, bytes.byteOffset, numSamples);
         const float32 = new Float32Array(int16.length);
         for (let i = 0; i < int16.length; i++) {
           float32[i] = int16[i] / 32768.0;
@@ -770,8 +772,11 @@
             }
           };
 
+          const muteGain = audioCtx.createGain();
+          muteGain.gain.value = 0;
           micSource.connect(processor);
-          processor.connect(audioCtx.destination);
+          processor.connect(muteGain);
+          muteGain.connect(audioCtx.destination);
 
           setCallState("listening");
         };
